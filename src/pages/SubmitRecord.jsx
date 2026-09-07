@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+const API_URL = import.meta.env.VITE_API_URL;
 
 function SubmitRecord() {
   const navigate = useNavigate();
@@ -176,7 +177,7 @@ function SubmitRecord() {
       formData.append("document", selectedFile);
 
       const response = await axios.post(
-        "http://localhost:5000/api/records/submit",
+        `${API_URL}/records/submit`,
         formData,
         {
           headers: {
