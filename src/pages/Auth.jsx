@@ -39,12 +39,12 @@ function Auth() {
       let response;
 
       if (isLogin) {
-        response = await axios.post("http://localhost:5000/api/auth/login", {
+        response = await axios.post("https://digital-record.vercel.app/api/auth/login", {
           username,
           password,
         });
       } else {
-        response = await axios.post("http://localhost:5000/api/auth/signup", {
+        response = await axios.post("https://digital-record.vercel.app/api/auth/signup", {
           username,
           password,
           code,
