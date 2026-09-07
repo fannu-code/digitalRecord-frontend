@@ -148,8 +148,8 @@ function Dashboard() {
               </h3>
 
               <p className="text-slate-500 mt-2">
-                Supported document formats: PDF, JPG, JPEG and PNG. Maximum
-                upload size: 10 MB.
+                Supported document formats: All Pdf's, Documents Word-Excel-PowerPoint, Zip Files and All Type of Images.
+                upload size Upto: 100 MB.
               </p>
             </div>
 

@@ -7,6 +7,7 @@ function SubmitRecord() {
 
   // Form States
   const [dairyNo, setDairyNo] = useState("");
+  const [documentName, setDocumentName] = useState("");
   const [date, setDate] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
 
@@ -23,36 +24,118 @@ function SubmitRecord() {
 
     if (!file) return;
 
-    const allowedTypes = ["image/jpeg", "image/png", "application/pdf"];
+    // =========================================
+    // ALLOWED FILE EXTENSIONS
+    // =========================================
 
-    // Validate File Type
-    if (!allowedTypes.includes(file.type)) {
-      setMessage("Only PDF, JPG, JPEG and PNG files are allowed.");
+    const allowedExtensions = [
+      // Images
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".gif",
+      ".bmp",
+      ".webp",
+      ".svg",
+      ".tif",
+      ".tiff",
+      ".ico",
+
+      // PDF
+      ".pdf",
+
+      // Microsoft Word
+      ".doc",
+      ".docx",
+      ".docm",
+      ".dot",
+      ".dotx",
+      ".dotm",
+
+      // Microsoft Excel
+      ".xls",
+      ".xlsx",
+      ".xlsm",
+      ".xlsb",
+      ".csv",
+
+      // Microsoft PowerPoint
+      ".ppt",
+      ".pptx",
+      ".pptm",
+      ".pps",
+      ".ppsx",
+      ".pot",
+      ".potx",
+      ".potm",
+
+      // Archives
+      ".zip",
+      ".rar",
+      ".7z",
+
+      // Text
+      ".txt",
+      ".rtf",
+    ];
+
+    // =========================================
+    // GET FILE EXTENSION
+    // =========================================
+
+    const fileName = file.name.toLowerCase();
+
+    const fileExtension = fileName.substring(fileName.lastIndexOf("."));
+
+    // =========================================
+    // FILE TYPE VALIDATION
+    // =========================================
+
+    if (!allowedExtensions.includes(fileExtension)) {
+      setMessage(
+        "Unsupported file type. Please select an image, PDF, Word, Excel, PowerPoint, ZIP, RAR, 7Z, TXT, CSV or RTF file.",
+      );
+
       setMessageType("error");
 
       setSelectedFile(null);
+
+      // Reset file input
       e.target.value = "";
 
       return;
     }
 
-    // Validate File Size
-    const maxSize = 10 * 1024 * 1024;
+    // =========================================
+    // FILE SIZE VALIDATION
+    // =========================================
+
+    // Maximum file size = 100 MB
+    const maxSize = 100 * 1024 * 1024;
 
     if (file.size > maxSize) {
-      setMessage("File size must not exceed 10 MB.");
+      setMessage("File size must not exceed 100 MB.");
+
       setMessageType("error");
 
       setSelectedFile(null);
+
+      // Reset file input
       e.target.value = "";
 
       return;
     }
 
-    // Set Selected File
+    // =========================================
+    // SET SELECTED FILE
+    // =========================================
+
     setSelectedFile(file);
 
-    // Clear Previous Messages
+    // =========================================
+    // CLEAR PREVIOUS MESSAGES
+    // =========================================
+
     setMessage("");
     setMessageType("");
   };
@@ -67,7 +150,7 @@ function SubmitRecord() {
     setMessageType("");
 
     // Validate Fields
-    if (!dairyNo || !date || !selectedFile) {
+    if (!dairyNo || !documentName || !date || !selectedFile) {
       setMessage("Please complete all fields and select a document.");
       setMessageType("error");
 
@@ -82,6 +165,8 @@ function SubmitRecord() {
       const formData = new FormData();
 
       formData.append("dairyNo", dairyNo.trim());
+
+      formData.append("documentName", documentName.trim());
 
       formData.append("date", date);
 
@@ -106,6 +191,7 @@ function SubmitRecord() {
 
       // Reset Form
       setDairyNo("");
+      setDocumentName("");
       setDate("");
       setSelectedFile(null);
 
@@ -257,6 +343,26 @@ function SubmitRecord() {
               </p>
             </div>
 
+            {/* Document Name */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Document Name
+                <span className="text-red-500 ml-1">*</span>
+              </label>
+
+              <input
+                type="text"
+                value={documentName}
+                onChange={(e) => setDocumentName(e.target.value)}
+                placeholder="e.g. Annual Report 2023"
+                className="w-full px-4 py-3.5 border border-slate-300 rounded-xl outline-none transition focus:border-slate-600 focus:ring-4 focus:ring-slate-100"
+              />
+
+              <p className="text-xs text-slate-400 mt-2">
+                Enter the name of the document.
+              </p>
+            </div>
+
             {/* ================================
                 RECORD DATE
             ================================= */}
@@ -312,7 +418,7 @@ function SubmitRecord() {
                 <input
                   id="document"
                   type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
+                  accept="image/*,.pdf,.doc,.docx,.docm,.xls,.xlsx,.xlsm,.xlsb,.csv,.ppt,.pptx,.pptm,.pps,.ppsx,.zip,.rar,.7z,.txt,.rtf"
                   onChange={handleFileChange}
                   className="hidden"
                 />
