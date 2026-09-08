@@ -21,14 +21,12 @@ function SearchRecord() {
   // AVAILABLE YEARS
   // =================================
   const [availableYears, setAvailableYears] = useState([]);
-
   const [loadingYears, setLoadingYears] = useState(false);
 
   // =================================
   // RECORD STATE
   // =================================
   const [records, setRecords] = useState([]);
-
   const [selectedRecord, setSelectedRecord] = useState(null);
 
   // =================================
@@ -38,9 +36,7 @@ function SearchRecord() {
   const [messageType, setMessageType] = useState("");
 
   const [loading, setLoading] = useState(false);
-
   const [downloading, setDownloading] = useState(false);
-
   const [deleting, setDeleting] = useState(false);
 
   // =================================
@@ -126,6 +122,7 @@ function SearchRecord() {
       // =================================
       const response = await axios.get(`${API_URL}/search`, {
         params,
+
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -178,7 +175,9 @@ function SearchRecord() {
   // DOWNLOAD DOCUMENT
   // =================================
   const handleDownload = async () => {
-    if (!selectedRecord) return;
+    if (!selectedRecord) {
+      return;
+    }
 
     try {
       setDownloading(true);
@@ -188,44 +187,117 @@ function SearchRecord() {
 
       const token = localStorage.getItem("token");
 
+      // =================================
+      // IMPORTANT
+      // =================================
+      //
+      // We first request the protected backend
+      // endpoint with the JWT token.
+      //
+      // The backend then redirects the browser
+      // to the appropriate Cloudinary URL.
+      //
+      // We use axios only to verify that the
+      // protected endpoint is accessible.
+      //
+      // We DO NOT use responseType: "blob".
+      // =================================
+
       const response = await axios.get(
         `${API_URL}/download/${selectedRecord._id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
+
+          // Prevent Axios from automatically
+          // trying to process the redirected
+          // Cloudinary file as JSON.
           responseType: "blob",
+
+          // Do not let Axios follow the redirect
+          // itself. The browser will handle the
+          // final download URL.
+          maxRedirects: 0,
+
+          validateStatus: (status) => {
+            return status >= 200 && status < 400;
+          },
         },
       );
 
       // =================================
-      // CREATE DOWNLOAD URL
+      // CHECK RESPONSE
       // =================================
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      //
+      // In some environments Axios may receive
+      // the redirected response itself.
+      //
+      // If that happens, download the returned
+      // Blob directly.
+      // =================================
 
-      const link = window.document.createElement("a");
+      if (response.data instanceof Blob && response.data.size > 0) {
+        const contentType =
+          response.headers["content-type"] ||
+          selectedRecord.documentType ||
+          "application/octet-stream";
 
-      link.href = url;
+        const blob = new Blob([response.data], {
+          type: contentType,
+        });
 
-      link.setAttribute(
-        "download",
-        selectedRecord.originalFileName || "document",
-      );
+        const url = window.URL.createObjectURL(blob);
 
-      window.document.body.appendChild(link);
+        const link = window.document.createElement("a");
 
-      link.click();
+        link.href = url;
 
-      link.remove();
+        link.download = selectedRecord.originalFileName || "document";
 
-      window.URL.revokeObjectURL(url);
+        window.document.body.appendChild(link);
 
+        link.click();
+
+        link.remove();
+
+        window.URL.revokeObjectURL(url);
+      }
+
+      // =================================
+      // SUCCESS
+      // =================================
       setMessage("Document downloaded successfully.");
 
       setMessageType("success");
     } catch (error) {
       console.error("Download Error:", error);
 
+      // =================================
+      // AUTHENTICATION ERROR
+      // =================================
+      if (error.response?.status === 401) {
+        setMessage("Your session has expired. Please login again.");
+
+        setMessageType("error");
+
+        return;
+      }
+
+      // =================================
+      // NOT FOUND
+      // =================================
+      if (error.response?.status === 404) {
+        setMessage("The requested document could not be found.");
+
+        setMessageType("error");
+
+        return;
+      }
+
+      // =================================
+      // GENERAL ERROR
+      // =================================
       setMessage(
         error.response?.data?.message || "Unable to download the document.",
       );
@@ -240,13 +312,17 @@ function SearchRecord() {
   // DELETE RECORD
   // =================================
   const handleDelete = async () => {
-    if (!selectedRecord) return;
+    if (!selectedRecord) {
+      return;
+    }
 
     const confirmDelete = window.confirm(
       `Are you sure you want to permanently delete the record "${selectedRecord.dairyNo}"?\n\nThis will also delete the uploaded document and cannot be undone.`,
     );
 
-    if (!confirmDelete) return;
+    if (!confirmDelete) {
+      return;
+    }
 
     try {
       setDeleting(true);
@@ -317,7 +393,9 @@ function SearchRecord() {
   // FORMAT DATE
   // =================================
   const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
+    if (!dateString) {
+      return "N/A";
+    }
 
     const date = new Date(dateString);
 
@@ -344,6 +422,51 @@ function SearchRecord() {
       return "Image Document";
     }
 
+    if (
+      record.documentType.includes("word") ||
+      record.documentType.includes("msword")
+    ) {
+      return "Microsoft Word Document";
+    }
+
+    if (
+      record.documentType.includes("excel") ||
+      record.documentType.includes("spreadsheet")
+    ) {
+      return "Microsoft Excel Document";
+    }
+
+    if (
+      record.documentType.includes("powerpoint") ||
+      record.documentType.includes("presentation")
+    ) {
+      return "Microsoft PowerPoint Document";
+    }
+
+    if (record.documentType === "application/zip") {
+      return "ZIP Archive";
+    }
+
+    if (record.documentType === "application/x-rar-compressed") {
+      return "RAR Archive";
+    }
+
+    if (record.documentType === "application/x-7z-compressed") {
+      return "7Z Archive";
+    }
+
+    if (record.documentType === "text/plain") {
+      return "Text Document";
+    }
+
+    if (record.documentType === "text/csv") {
+      return "CSV File";
+    }
+
+    if (record.documentType === "application/rtf") {
+      return "RTF Document";
+    }
+
     return record.documentType;
   };
 
@@ -361,6 +484,47 @@ function SearchRecord() {
 
     if (record.documentType.startsWith("image/")) {
       return "🖼️";
+    }
+
+    if (
+      record.documentType.includes("word") ||
+      record.documentType.includes("msword")
+    ) {
+      return "📝";
+    }
+
+    if (
+      record.documentType.includes("excel") ||
+      record.documentType.includes("spreadsheet")
+    ) {
+      return "📊";
+    }
+
+    if (
+      record.documentType.includes("powerpoint") ||
+      record.documentType.includes("presentation")
+    ) {
+      return "📽️";
+    }
+
+    if (
+      record.documentType === "application/zip" ||
+      record.documentType === "application/x-rar-compressed" ||
+      record.documentType === "application/x-7z-compressed"
+    ) {
+      return "🗜️";
+    }
+
+    if (record.documentType === "text/plain") {
+      return "📃";
+    }
+
+    if (record.documentType === "text/csv") {
+      return "📊";
+    }
+
+    if (record.documentType === "application/rtf") {
+      return "📄";
     }
 
     return "📄";
@@ -734,13 +898,26 @@ function SearchRecord() {
                       </p>
                     </div>
 
+                    {/* FILE EXTENSION */}
+                    {selectedRecord.fileExtension && (
+                      <div className="mb-5">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                          File Extension
+                        </p>
+
+                        <p className="mt-2 text-sm font-semibold text-slate-700 uppercase">
+                          {selectedRecord.fileExtension}
+                        </p>
+                      </div>
+                    )}
+
                     {/* FILE TYPE */}
                     <div className="mb-5">
                       <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                         File Type
                       </p>
 
-                      <p className="mt-2 text-sm text-slate-600">
+                      <p className="mt-2 text-sm text-slate-600 break-words">
                         {getDocumentType(selectedRecord)}
                       </p>
                     </div>
